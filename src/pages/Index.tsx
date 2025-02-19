@@ -4,16 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
-import { User, Lock, UserPlus } from "lucide-react";
+import { User, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isRegister, setIsRegister] = useState(false);
-  const [username, setUsername] = useState("");
   const navigate = useNavigate();
   const [lastAttemptTime, setLastAttemptTime] = useState(0);
 
@@ -38,6 +37,9 @@ const Index = () => {
 
     try {
       if (isRegister) {
+        // Erstelle eine "fake" E-Mail-Adresse basierend auf dem Benutzernamen
+        const email = `${username.toLowerCase()}@example.com`;
+        
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -55,11 +57,23 @@ const Index = () => {
           throw error;
         }
 
+        // Da keine E-Mail-Bestätigung erforderlich ist, können wir direkt anmelden
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
         toast({
           title: "Registrierung erfolgreich",
-          description: "Bitte überprüfen Sie Ihre E-Mails für die Bestätigung.",
+          description: "Willkommen bei der App!",
         });
+        
+        navigate("/dashboard");
       } else {
+        // Beim Login verwenden wir auch die generierte E-Mail
+        const email = `${username.toLowerCase()}@example.com`;
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -100,30 +114,14 @@ const Index = () => {
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
-          {isRegister && (
-            <div className="space-y-2">
-              <div className="relative">
-                <UserPlus className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Benutzername"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
-            </div>
-          )}
-
           <div className="space-y-2">
             <div className="relative">
               <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <Input
-                type="email"
-                placeholder="E-Mail"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Benutzername"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="pl-10"
                 required
               />
