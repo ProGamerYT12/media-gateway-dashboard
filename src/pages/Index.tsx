@@ -36,10 +36,20 @@ const Index = () => {
     }
 
     try {
+      const email = `${username.toLowerCase()}@example.com`;
+
       if (isRegister) {
-        // Erstelle eine "fake" E-Mail-Adresse basierend auf dem Benutzernamen
-        const email = `${username.toLowerCase()}@example.com`;
-        
+        // Prüfe zuerst, ob der Benutzername bereits existiert
+        const { data: existingProfiles } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', username);
+
+        if (existingProfiles && existingProfiles.length > 0) {
+          throw new Error("Dieser Benutzername ist bereits vergeben.");
+        }
+
+        // Wenn der Benutzername frei ist, registriere den neuen Benutzer
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -57,7 +67,7 @@ const Index = () => {
           throw error;
         }
 
-        // Da keine E-Mail-Bestätigung erforderlich ist, können wir direkt anmelden
+        // Automatische Anmeldung nach erfolgreicher Registrierung
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -72,8 +82,17 @@ const Index = () => {
         
         navigate("/dashboard");
       } else {
-        // Beim Login verwenden wir auch die generierte E-Mail
-        const email = `${username.toLowerCase()}@example.com`;
+        // Bei der Anmeldung prüfen wir zuerst, ob der Benutzername existiert
+        const { data: existingProfiles } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', username);
+
+        if (!existingProfiles || existingProfiles.length === 0) {
+          throw new Error("Dieser Benutzername existiert nicht.");
+        }
+
+        // Wenn der Benutzername existiert, versuche die Anmeldung
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
