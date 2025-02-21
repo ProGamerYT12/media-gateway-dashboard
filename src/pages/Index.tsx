@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
-import { User, Lock } from "lucide-react";
+import { User, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isRegister, setIsRegister] = useState(false);
   const navigate = useNavigate();
@@ -30,14 +31,21 @@ const Index = () => {
       return;
     }
 
+    if (!email.includes('@')) {
+      toast({
+        variant: "destructive",
+        title: "Ungültige E-Mail",
+        description: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     if (isRegister) {
       setLastAttemptTime(now);
     }
 
     try {
-      const email = `${username.toLowerCase()}@example.com`;
-
       if (isRegister) {
         // Prüfe zuerst, ob der Benutzername bereits existiert
         const { data: existingProfiles } = await supabase
@@ -67,14 +75,6 @@ const Index = () => {
           throw error;
         }
 
-        // Automatische Anmeldung nach erfolgreicher Registrierung
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) throw signInError;
-
         toast({
           title: "Registrierung erfolgreich",
           description: "Willkommen bei der App!",
@@ -82,17 +82,7 @@ const Index = () => {
         
         navigate("/dashboard");
       } else {
-        // Bei der Anmeldung prüfen wir zuerst, ob der Benutzername existiert
-        const { data: existingProfiles } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', username);
-
-        if (!existingProfiles || existingProfiles.length === 0) {
-          throw new Error("Dieser Benutzername existiert nicht.");
-        }
-
-        // Wenn der Benutzername existiert, versuche die Anmeldung
+        // Bei der Anmeldung
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -108,10 +98,21 @@ const Index = () => {
         navigate("/dashboard");
       }
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Benutzerfreundliche Fehlermeldungen
+      if (errorMessage.includes("Email not confirmed")) {
+        errorMessage = "Bitte bestätigen Sie Ihre E-Mail-Adresse.";
+      } else if (errorMessage.includes("Invalid login credentials")) {
+        errorMessage = "Falsche E-Mail oder Passwort.";
+      } else if (errorMessage.includes("User already registered")) {
+        errorMessage = "Diese E-Mail-Adresse ist bereits registriert.";
+      }
+
       toast({
         variant: "destructive",
         title: "Fehler",
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -133,14 +134,30 @@ const Index = () => {
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
+          {isRegister && (
+            <div className="space-y-2">
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Benutzername"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="pl-10"
+                  required={isRegister}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="relative">
-              <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <Input
-                type="text"
-                placeholder="Benutzername"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                placeholder="E-Mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="pl-10"
                 required
               />
