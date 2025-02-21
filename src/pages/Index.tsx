@@ -15,21 +15,9 @@ const Index = () => {
   const [password, setPassword] = useState("");
   const [isRegister, setIsRegister] = useState(false);
   const navigate = useNavigate();
-  const [lastAttemptTime, setLastAttemptTime] = useState(0);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Überprüfe die Ratenbegrenzung (18 Sekunden zwischen Versuchen)
-    const now = Date.now();
-    if (isRegister && now - lastAttemptTime < 18000) {
-      toast({
-        variant: "destructive",
-        title: "Zu viele Versuche",
-        description: "Bitte warten Sie 18 Sekunden, bevor Sie es erneut versuchen.",
-      });
-      return;
-    }
 
     if (!email.includes('@')) {
       toast({
@@ -41,9 +29,6 @@ const Index = () => {
     }
 
     setIsLoading(true);
-    if (isRegister) {
-      setLastAttemptTime(now);
-    }
 
     try {
       if (isRegister) {
@@ -68,12 +53,7 @@ const Index = () => {
           },
         });
 
-        if (error) {
-          if (error.message.includes("rate_limit")) {
-            throw new Error("Bitte warten Sie 18 Sekunden, bevor Sie es erneut versuchen.");
-          }
-          throw error;
-        }
+        if (error) throw error;
 
         toast({
           title: "Registrierung erfolgreich",
